@@ -9,7 +9,9 @@
 import AVFoundation
 import UIKit
 
-public protocol TrimmerViewDelegate: class {
+/// A delegate to be notified of when the thumb position has changed. Useful to link an instance of the ThumbSelectorView to a
+/// video preview like an `AVPlayer`.
+public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle)
     func positionBarStoppedMoving(triggeredHandle: TrimmerView.TriggeredHandle)
 }
@@ -28,6 +30,10 @@ public protocol TrimmerViewDelegate: class {
     }
     
     // MARK: - Properties
+    
+    private var trimmerDelegate: TrimmerViewDelegate? {
+        return delegate as? TrimmerViewDelegate
+    }
 
     // MARK: Color Customization
 
@@ -48,10 +54,6 @@ public protocol TrimmerViewDelegate: class {
     // labels for the handlers
     public var rightHandleLabel = UILabel()
     public var leftHandleLabel  = UILabel()
-
-    // MARK: Interface
-
-    public weak var delegate: TrimmerViewDelegate?
 
     // MARK: Subviews
 
@@ -82,7 +84,7 @@ public protocol TrimmerViewDelegate: class {
 
     /// The minimum duration allowed for the trimming. The handles won't pan further if the minimum duration is attained.
     public var minDuration: Double = 3
-    
+        
     // MARK: - View & constraints configurations
 
     override func setupSubviews() {
@@ -325,8 +327,8 @@ public protocol TrimmerViewDelegate: class {
 
     // MARK: - Asset loading
 
-    override func assetDidChange(newAsset: AVAsset?) {
-        super.assetDidChange(newAsset: newAsset)
+    override func propertiesDidChange() {
+        super.propertiesDidChange()
         resetHandleViewPosition()
     }
 
@@ -364,20 +366,20 @@ public protocol TrimmerViewDelegate: class {
 
     private func updateSelectedTime(stoppedMoving: Bool, triggeredHandle: TriggeredHandle) {
         if stoppedMoving {
-            delegate?.positionBarStoppedMoving(triggeredHandle: triggeredHandle)
+            trimmerDelegate?.positionBarStoppedMoving(triggeredHandle: triggeredHandle)
         } else {
-            delegate?.didChangePositionBar(triggeredHandle: triggeredHandle)
+            trimmerDelegate?.didChangePositionBar(triggeredHandle: triggeredHandle)
         }
     }
 
     private var minimumDistanceBetweenHandle: CGFloat {
-        guard let asset = asset else { return 0 }
-        return CGFloat(minDuration) * assetPreview.contentView.frame.width / CGFloat(asset.duration.seconds)
+        guard let rideDuration = rideDuration else { return 0 }
+        return CGFloat(minDuration) * assetPreview.contentView.frame.width / CGFloat(rideDuration)
     }
 
     private var maximumDistanceBetweenHandle: CGFloat {
-        guard let asset = asset else { return 0 }
-        return CGFloat(maxDuration) * assetPreview.contentView.frame.width / CGFloat(asset.duration.seconds)
+        guard let rideDuration = rideDuration else { return 0 }
+        return CGFloat(maxDuration) * assetPreview.contentView.frame.width / CGFloat(rideDuration)
     }
     
     // MARK: - Scroll View Delegate
