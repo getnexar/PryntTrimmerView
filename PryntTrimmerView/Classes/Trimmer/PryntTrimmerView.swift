@@ -109,8 +109,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     override func constrainAssetPreview() {
-        assetPreview.leftAnchor.constraint(equalTo: leftAnchor, constant: handleWidth).isActive = true
-        assetPreview.rightAnchor.constraint(equalTo: rightAnchor, constant: -handleWidth).isActive = true
+        assetPreview.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
+        assetPreview.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
         assetPreview.topAnchor.constraint(equalTo: topAnchor).isActive = true
         assetPreview.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
     }
