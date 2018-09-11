@@ -92,8 +92,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         super.setupSubviews()
         backgroundColor = UIColor.clear
         layer.zPosition = 1
-        setupTrimmerView()
         setupHandleView()
+        setupTrimmerView()
         setupMaskView()
         setupGestures()
         updateMainColor()
@@ -109,8 +109,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     override func constrainAssetPreview() {
-        assetPreview.leftAnchor.constraint(equalTo: leftAnchor, constant: handleWidth).isActive = true
-        assetPreview.rightAnchor.constraint(equalTo: rightAnchor, constant: -handleWidth).isActive = true
+        assetPreview.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
+        assetPreview.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
         assetPreview.topAnchor.constraint(equalTo: topAnchor).isActive = true
         assetPreview.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
     }
@@ -124,10 +124,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
         trimView.topAnchor.constraint(equalTo: topAnchor).isActive = true
         trimView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
-        leftConstraint = trimView.leftAnchor.constraint(equalTo: leftAnchor)
-        rightConstraint = trimView.rightAnchor.constraint(equalTo: rightAnchor)
-        leftConstraint?.isActive = true
-        rightConstraint?.isActive = true
+        trimView.leftAnchor.constraint(equalTo: leftHandleView.rightAnchor).isActive = true
+        trimView.rightAnchor.constraint(equalTo: rightHandleView.leftAnchor).isActive = true
     }
 
     private func setupHandleView() {
@@ -139,7 +137,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
         leftHandleView.heightAnchor.constraint(equalTo: heightAnchor).isActive = true
         leftHandleView.widthAnchor.constraint(equalToConstant: handleWidth).isActive = true
-        leftHandleView.leftAnchor.constraint(equalTo: trimView.leftAnchor).isActive = true
+        leftConstraint = leftHandleView.leftAnchor.constraint(equalTo: leftAnchor)
+        leftConstraint?.isActive = true
         leftHandleView.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
 
         leftHandleKnob.translatesAutoresizingMaskIntoConstraints = false
@@ -165,7 +164,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
         rightHandleView.heightAnchor.constraint(equalTo: heightAnchor).isActive = true
         rightHandleView.widthAnchor.constraint(equalToConstant: handleWidth).isActive = true
-        rightHandleView.rightAnchor.constraint(equalTo: trimView.rightAnchor).isActive = true
+        rightConstraint = rightHandleView.rightAnchor.constraint(equalTo: rightAnchor)
+        rightConstraint?.isActive = true
         rightHandleView.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
 
         rightHandleKnob.translatesAutoresizingMaskIntoConstraints = false
@@ -240,10 +240,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         case .began:
             if view == leftHandleView {
                 currentLeftConstraint = leftConstraint!.constant
-                self.bringSubview(toFront: leftHandleView)
             } else if view == rightHandleView {
                 currentRightConstraint = rightConstraint!.constant
-                self.bringSubview(toFront: rightHandleView)
             } else {
                 currentLeftConstraint = leftConstraint!.constant
                 currentRightConstraint = rightConstraint!.constant
