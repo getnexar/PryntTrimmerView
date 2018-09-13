@@ -84,11 +84,45 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     /// The minimum duration allowed for the trimming. The handles won't pan further if the minimum duration is attained.
     public var minDuration: Double = 3
+    
+    private var lastWidth: CGFloat?
         
     // MARK: - View & constraints configurations
+    
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+        
+        let newWidth = bounds.width
+        guard let lastWidth = lastWidth else {
+            self.lastWidth = newWidth
+            return
+        }
+        
+        guard newWidth != lastWidth else {
+            return
+        }
+        
+        self.lastWidth = newWidth
+        
+        updateConstraints(newWidth, lastWidth)
+    }
+    
+    private func updateConstraints(_ newWidth: CGFloat, _ lastWidth: CGFloat) {
+        guard
+            let leftConstraint = leftConstraint,
+            let rightConstraint = rightConstraint else {
+                return
+        }
+        
+        let ratio = newWidth / lastWidth
+        leftConstraint.constant = ratio * leftConstraint.constant
+        rightConstraint.constant = ratio * rightConstraint.constant
+        layoutSubviews()
+        fixHandlesLabelsPositionIfNeeded()
+        layoutSubviews()
+    }
 
     override func setupSubviews() {
-
         super.setupSubviews()
         backgroundColor = UIColor.clear
         layer.zPosition = 1
