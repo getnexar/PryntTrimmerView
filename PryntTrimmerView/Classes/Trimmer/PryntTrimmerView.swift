@@ -392,13 +392,13 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     /// The selected start time for the current asset.
     public var startTime: CMTime? {
-        let startPosition = leftHandleView.frame.origin.x + assetPreview.contentOffset.x
+        let startPosition = leftHandleView.frame.origin.x + handleWidth + assetPreview.contentOffset.x
         return getTime(from: startPosition)
     }
 
     /// The selected end time for the current asset.
     public var endTime: CMTime? {
-        let endPosition = rightHandleView.frame.origin.x + assetPreview.contentOffset.x + handleWidth
+        let endPosition = rightHandleView.frame.origin.x + assetPreview.contentOffset.x
         return getTime(from: endPosition)
     }
 
@@ -412,12 +412,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     private var minimumDistanceBetweenHandle: CGFloat {
         guard let rideDuration = rideDuration else { return 0 }
-        return CGFloat(minDuration) * assetPreview.contentSize.width / CGFloat(rideDuration) - 2 * handleWidth
+        return CGFloat(minDuration) * assetPreview.contentSize.width / CGFloat(rideDuration)
     }
 
     private var maximumDistanceBetweenHandle: CGFloat {
         guard let rideDuration = rideDuration else { return 0 }
-        return CGFloat(maxDuration) * assetPreview.contentSize.width / CGFloat(rideDuration) - 2 * handleWidth
+        return CGFloat(maxDuration) * assetPreview.contentSize.width / CGFloat(rideDuration)
     }
     
     // MARK: - Scroll View Delegate

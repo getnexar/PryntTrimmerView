@@ -28,12 +28,17 @@ class AssetVideoScrollView: UIView {
     fileprivate var thumbnailSize: CGSize = CGSize.zero
     fileprivate var contentWidth: CGFloat = 0
     fileprivate var lastWidth: CGFloat?
+    fileprivate var horizontalInset: CGFloat = 15
     
     var contentSize: CGSize {
+        //return CGSize(width: collectionView.contentSize.width - 2 * horizontalInset,
+        //             height: collectionView.contentSize.height)
         return collectionView.contentSize
     }
     
     var contentOffset: CGPoint {
+        //return CGPoint(x: collectionView.contentOffset.x - horizontalInset,
+        //               y: collectionView.contentOffset.y)
         return collectionView.contentOffset
     }
     
@@ -69,7 +74,7 @@ class AssetVideoScrollView: UIView {
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
         layout.minimumInteritemSpacing = 0
-        layout.sectionInset = UIEdgeInsets.zero
+        layout.sectionInset = UIEdgeInsets(top: 0, left: horizontalInset, bottom: 0, right: horizontalInset)
         
         collectionView.register(ThumbnailCell.self, forCellWithReuseIdentifier: String(describing: ThumbnailCell))
         
