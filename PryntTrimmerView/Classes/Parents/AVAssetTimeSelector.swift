@@ -53,7 +53,6 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
     func setupAssetPreview() {
         assetPreview.translatesAutoresizingMaskIntoConstraints = false
         assetPreview.delegate = self
-        assetPreview.framesDelegate = self
         addSubview(assetPreview)
     }
 
@@ -100,5 +99,11 @@ extension AVAssetTimeSelector: AssetVideoScrollViewDelegate {
     
     func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->()) {
         delegate?.thumbnailFor(imageTime, completion: completion)
+    }
+    
+    func didUpdateDimensions() {
+    }
+    
+    func contentOffsetDidChange() {
     }
 }

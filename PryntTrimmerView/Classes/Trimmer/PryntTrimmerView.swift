@@ -76,14 +76,16 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     private let handleWidth: CGFloat = 15
 
     /// The maximum duration allowed for the trimming. Change it before setting the asset, as the asset preview
-    public var maxDuration: Double = 15 {
-        didSet {
-            assetPreview.maxDuration = maxDuration
-        }
-    }
+    public var maxDuration: Double = 15
 
     /// The minimum duration allowed for the trimming. The handles won't pan further if the minimum duration is attained.
     public var minDuration: Double = 3
+    
+    public var maxOnscreenDuration: Double = 1800 {
+        didSet {
+            assetPreview.maxOnscreenDuration = maxOnscreenDuration
+        }
+    }
     
     private var lastWidth: CGFloat?
         
@@ -107,6 +109,15 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         updateConstraints(newWidth, lastWidth)
     }
     
+    override func didUpdateDimensions() {
+        initializeHandles()
+        trimmerDelegate?.didChangePositionBar(triggeredHandle: .unknown)
+    }
+    
+    override func contentOffsetDidChange() {
+        trimmerDelegate?.didChangePositionBar(triggeredHandle: .unknown)
+    }
+    
     private func updateConstraints(_ newWidth: CGFloat, _ lastWidth: CGFloat) {
         guard
             let leftConstraint = leftConstraint,
@@ -115,8 +126,11 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
         
         let ratio = newWidth / lastWidth
+        print("newWidth: \(newWidth), lastWidth: \(lastWidth), ratio: \(ratio)")
+        print("before: leftConstraint: \(leftConstraint.constant), rightConstraint: \(rightConstraint.constant)")
         leftConstraint.constant = ratio * leftConstraint.constant
         rightConstraint.constant = ratio * rightConstraint.constant
+        print("after: leftConstraint: \(leftConstraint.constant), rightConstraint: \(rightConstraint.constant)")
         layoutSubviews()
         fixHandlesLabelsPositionIfNeeded()
         layoutSubviews()
@@ -134,9 +148,16 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         updateHandleColor()
     }
     
-    open func initializeHandles() {
-        leftConstraint?.constant = 0.0
-        rightConstraint?.constant = min(2 * handleWidth - frame.width + leftHandleView.frame.origin.x + minimumDistanceBetweenHandle, 0)
+    private func initializeHandles() {
+        guard
+            let leftConstraint = leftConstraint,
+            let rightConstraint = rightConstraint,
+            leftConstraint.constant == 0,
+            rightConstraint.constant == 0 else {
+            return
+        }
+        leftConstraint.constant = 0.0
+        rightConstraint.constant = min(2 * handleWidth - frame.width + leftHandleView.frame.origin.x + minimumDistanceBetweenHandle, 0)
         layoutSubviews()
         fixHandlesLabelsPositionIfNeeded()
         layoutSubviews()
@@ -163,7 +184,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     private func setupHandleView() {
-        
         leftHandleView.isUserInteractionEnabled = true
         leftHandleView.layer.cornerRadius = 2.0
         leftHandleView.translatesAutoresizingMaskIntoConstraints = false
@@ -220,7 +240,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     private func setupMaskView() {
-
         leftMaskView.isUserInteractionEnabled = false
         leftMaskView.backgroundColor = .white
         leftMaskView.alpha = 0.7
@@ -357,19 +376,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
     }
 
-    // MARK: - Asset loading
-
-    override func propertiesDidChange() {
-        super.propertiesDidChange()
-        resetHandleViewPosition()
-    }
-
-    private func resetHandleViewPosition() {
-        leftConstraint?.constant = 0
-        rightConstraint?.constant = 0
-        layoutIfNeeded()
-    }
-
     // MARK: - Time Equivalence
 
     /// Move the position bar to the given time.
@@ -392,7 +398,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     /// The selected end time for the current asset.
     public var endTime: CMTime? {
-        let endPosition = rightHandleView.frame.origin.x + assetPreview.contentOffset.x - handleWidth
+        let endPosition = rightHandleView.frame.origin.x + assetPreview.contentOffset.x + handleWidth
         return getTime(from: endPosition)
     }
 
@@ -406,12 +412,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     private var minimumDistanceBetweenHandle: CGFloat {
         guard let rideDuration = rideDuration else { return 0 }
-        return CGFloat(minDuration) * assetPreview.contentView.frame.width / CGFloat(rideDuration)
+        return CGFloat(minDuration) * assetPreview.contentSize.width / CGFloat(rideDuration) - 2 * handleWidth
     }
 
     private var maximumDistanceBetweenHandle: CGFloat {
         guard let rideDuration = rideDuration else { return 0 }
-        return CGFloat(maxDuration) * assetPreview.contentView.frame.width / CGFloat(rideDuration)
+        return CGFloat(maxDuration) * assetPreview.contentSize.width / CGFloat(rideDuration) - 2 * handleWidth
     }
     
     // MARK: - Scroll View Delegate
