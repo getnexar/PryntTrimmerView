@@ -23,23 +23,42 @@ class AssetVideoScrollView: UIView {
     let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
     var maxOnscreenDuration: Double = 1800
     fileprivate var thumbnailFrameAspectRatio: CGFloat?
-    private var duration: TimeInterval?
+    fileprivate var duration: TimeInterval?
     fileprivate var thumbnailTimes: [NSValue] = []
     fileprivate var thumbnailSize: CGSize = CGSize.zero
     fileprivate var contentWidth: CGFloat = 0
     fileprivate var lastWidth: CGFloat?
+    fileprivate var lastContentOffset: CGFloat = 0
     fileprivate var horizontalInset: CGFloat = 15
     
     var contentSize: CGSize {
-        //return CGSize(width: collectionView.contentSize.width - 2 * horizontalInset,
-        //             height: collectionView.contentSize.height)
         return collectionView.contentSize
     }
     
     var contentOffset: CGPoint {
-        //return CGPoint(x: collectionView.contentOffset.x - horizontalInset,
-        //               y: collectionView.contentOffset.y)
         return collectionView.contentOffset
+    }
+    
+    var realContentSize: CGSize {
+        return CGSize(width: collectionView.contentSize.width - 2 * horizontalInset,
+                      height: collectionView.contentSize.height)
+    }
+    
+    var leftOnScreenInset: CGFloat {
+        guard collectionView.contentOffset.x < horizontalInset else {
+            return 0
+        }
+        
+        return horizontalInset - collectionView.contentOffset.x
+    }
+    
+    var rightOnScreenInset: CGFloat {
+        guard collectionView.contentOffset.x + bounds.width > contentWidth + horizontalInset else {
+            return 0
+        }
+        
+        let offScreenInset = collectionView.contentSize.width - ( collectionView.contentOffset.x + bounds.width)
+        return horizontalInset - offScreenInset
     }
     
     override init(frame: CGRect) {
@@ -116,13 +135,18 @@ class AssetVideoScrollView: UIView {
             return
         }
         
+        lastContentOffset = collectionView.contentOffset.x
         recalculateThumbnailTimes(for: duration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
         recalculateContentOffset(lastWidth)
     }
     
     private func recalculateContentOffset(_ lastWidth: CGFloat) {
         let ratio = bounds.width / lastWidth
-        collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x * ratio,
+        guard lastContentOffset > horizontalInset else {
+            return
+        }
+        
+        collectionView.contentOffset = CGPoint(x: (lastContentOffset - horizontalInset) * ratio + horizontalInset,
                                                y: collectionView.contentOffset.y)
     }
 
@@ -172,6 +196,21 @@ class AssetVideoScrollView: UIView {
             timesForThumbnails.append(nsValue)
         }
         return timesForThumbnails
+    }
+}
+
+extension AssetVideoScrollView {
+    
+    func getTime(from position: CGFloat) -> CMTime? {
+        guard let rideDuration = duration else {
+            return nil
+        }
+        
+        let position = position - horizontalInset
+        
+        let normalizedRatio = max(min(1, position / realContentSize.width), 0)
+        let positionTimeValue = Double(normalizedRatio) * rideDuration
+        return CMTime(value: Int64(positionTimeValue), timescale: 1)
     }
 }
 
