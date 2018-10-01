@@ -340,9 +340,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             return
         }
         let maxConstraint = min(leftConstraint.constant  + minimumDistanceBetweenHandle - bounds.width, -handleWidth)
-        //let maxConstraint = min(2 * handleWidth - frame.width + leftHandleView.frame.origin.x + minimumDistanceBetweenHandle, 0)
         let minConstraint = min(leftConstraint.constant  + maximumDistanceBetweenHandle - bounds.width, -handleWidth)
-        //let minConstraint = min(2 * handleWidth - frame.width + leftHandleView.frame.origin.x + maximumDistanceBetweenHandle, 0)
         var newConstraint = max(min(0, currentRightConstraint + translation.x), maxConstraint)
         if newConstraint > minConstraint {
             newConstraint = minConstraint
