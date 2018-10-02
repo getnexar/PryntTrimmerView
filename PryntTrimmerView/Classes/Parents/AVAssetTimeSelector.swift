@@ -73,11 +73,11 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
 
     // MARK: - Time & Position Equivalence
 
-    func getTime(from position: CGFloat) -> CMTime? {
-        return assetPreview.getTime(from: position)
+    func time(from position: CGFloat) -> CMTime? {
+        return assetPreview.time(from: position)
     }
 
-    func getPosition(from time: CMTime) -> CGFloat? {
+    func position(from time: CMTime) -> CGFloat? {
         guard let duration = rideDuration else {
             return nil
         }

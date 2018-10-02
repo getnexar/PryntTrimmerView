@@ -151,7 +151,7 @@ class AssetVideoScrollView: UIView {
     }
 
     internal func recalculateThumbnailTimes(for duration: TimeInterval, thumbnailFrameAspectRatio: CGFloat) {
-        let thumbnailSize = getThumbnailFrameSize(for: thumbnailFrameAspectRatio)
+        let thumbnailSize = self.thumbnailSize(for: thumbnailFrameAspectRatio)
         guard
             thumbnailSize.height.isNormal,
             thumbnailSize.width.isNormal else {
@@ -162,32 +162,32 @@ class AssetVideoScrollView: UIView {
         self.thumbnailFrameAspectRatio = thumbnailFrameAspectRatio
         self.duration = duration
         
-        let thumbnailCount =  getThumbnailCount(for: duration)
-        thumbnailTimes = getThumbnailTimes(for: duration, numberOfThumbnails: thumbnailCount)
+        let thumbnailCount = self.thumbnailCount(for: duration)
+        thumbnailTimes = thumbnailTimes(for: duration, numberOfThumbnails: thumbnailCount)
         self.collectionView.reloadData()
         self.collectionView.performBatchUpdates(nil) { _ in
             self.delegate?.didUpdateDimensions()
         }
     }
     
-    private func getThumbnailCount(for duration: TimeInterval) -> Int {
+    private func thumbnailCount(for duration: TimeInterval) -> Int {
         let contentWidthFactor = CGFloat(max(1, duration / maxOnscreenDuration))
         contentWidth = bounds.width * contentWidthFactor
         guard let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
             return 0
         }
-        let thumbnailSize = getThumbnailFrameSize(for: thumbnailFrameAspectRatio)
+        let thumbnailSize = self.thumbnailSize(for: thumbnailFrameAspectRatio)
         let thumbnailCount =  thumbnailSize.width > 0 ? Int(ceil(contentWidth / thumbnailSize.width)) : 0
         return thumbnailCount
     }
 
-    private func getThumbnailFrameSize(for aspectRatio: CGFloat) -> CGSize {
+    private func thumbnailSize(for aspectRatio: CGFloat) -> CGSize {
         let height = bounds.height
         let width = height * aspectRatio
         return CGSize(width: fabs(width), height: fabs(height))
     }
 
-    private func getThumbnailTimes(for duration: TimeInterval, numberOfThumbnails: Int) -> [NSValue] {
+    private func thumbnailTimes(for duration: TimeInterval, numberOfThumbnails: Int) -> [NSValue] {
         let timeIncrement = (duration * 1000) / Double(numberOfThumbnails)
         var timesForThumbnails = [NSValue]()
         for index in 0..<numberOfThumbnails {
@@ -201,7 +201,7 @@ class AssetVideoScrollView: UIView {
 
 extension AssetVideoScrollView {
     
-    func getTime(from position: CGFloat) -> CMTime? {
+    func time(from position: CGFloat) -> CMTime? {
         guard let rideDuration = duration else {
             return nil
         }

@@ -384,7 +384,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     /// Move the position bar to the given time.
     public func seek(to time: CMTime) {
-        if let newPosition = getPosition(from: time) {
+        if let newPosition = position(from: time) {
             let offsetPosition = newPosition - assetPreview.contentOffset.x - leftHandleView.frame.origin.x
             let maxPosition = rightHandleView.frame.origin.x - (leftHandleView.frame.origin.x + handleWidth)
             let normalizedPosition = min(max(0, offsetPosition), maxPosition)
@@ -399,7 +399,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             return nil
         }
         let startPosition = leftConstraint.constant + assetPreview.contentOffset.x
-        return getTime(from: startPosition)
+        return time(from: startPosition)
     }
 
     /// The selected end time for the current asset.
@@ -408,7 +408,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             return nil
         }
         let endPosition = bounds.width + rightConstraint.constant + assetPreview.contentOffset.x
-        return getTime(from: endPosition)
+        return time(from: endPosition)
     }
 
     private func updateSelectedTime(stoppedMoving: Bool, triggeredHandle: TriggeredHandle) {
@@ -440,6 +440,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             updateSelectedTime(stoppedMoving: true, triggeredHandle: .unknown)
         }
     }
+    
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         updateSelectedTime(stoppedMoving: false, triggeredHandle: .unknown)
     }

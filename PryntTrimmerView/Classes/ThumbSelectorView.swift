@@ -150,7 +150,7 @@ public class ThumbSelectorView: AVAssetTimeSelector {
     /// The currently selected time of the asset.
     public var selectedTime: CMTime? {
         let thumbPosition = thumbView.center.x + assetPreview.contentOffset.x - (thumbView.frame.width / 2)
-        return getTime(from: thumbPosition)
+        return time(from: thumbPosition)
     }
 
     private func updateSelectedTime() {
