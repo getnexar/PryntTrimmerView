@@ -147,14 +147,10 @@ public class ThumbSelectorView: AVAssetTimeSelector {
 
     // MARK: - Time & Position Equivalence
 
-    override var durationSize: CGFloat {
-        return assetPreview.contentSize.width - thumbView.frame.width
-    }
-
     /// The currently selected time of the asset.
     public var selectedTime: CMTime? {
         let thumbPosition = thumbView.center.x + assetPreview.contentOffset.x - (thumbView.frame.width / 2)
-        return getTime(from: thumbPosition)
+        return time(from: thumbPosition)
     }
 
     private func updateSelectedTime() {

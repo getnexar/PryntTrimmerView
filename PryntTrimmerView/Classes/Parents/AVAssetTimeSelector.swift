@@ -53,7 +53,6 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
     func setupAssetPreview() {
         assetPreview.translatesAutoresizingMaskIntoConstraints = false
         assetPreview.delegate = self
-        assetPreview.framesDelegate = self
         addSubview(assetPreview)
     }
 
@@ -74,25 +73,16 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
 
     // MARK: - Time & Position Equivalence
 
-    var durationSize: CGFloat {
-        return assetPreview.contentSize.width
+    func time(from position: CGFloat) -> CMTime? {
+        return assetPreview.time(from: position)
     }
 
-    func getTime(from position: CGFloat) -> CMTime? {
-        guard let rideDuration = rideDuration else {
-            return nil
-        }
-        let normalizedRatio = max(min(1, position / durationSize), 0)
-        let positionTimeValue = Double(normalizedRatio) * Double(rideDuration)
-        return CMTime(value: Int64(positionTimeValue), timescale: 1)
-    }
-
-    func getPosition(from time: CMTime) -> CGFloat? {
+    func position(from time: CMTime) -> CGFloat? {
         guard let duration = rideDuration else {
             return nil
         }
         let timeRatio = CGFloat(time.value) / CGFloat(duration)
-        return timeRatio * durationSize
+        return timeRatio * assetPreview.realContentSize.width
     }
 }
 
@@ -100,5 +90,11 @@ extension AVAssetTimeSelector: AssetVideoScrollViewDelegate {
     
     func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->()) {
         delegate?.thumbnailFor(imageTime, completion: completion)
+    }
+    
+    func didUpdateDimensions() {
+    }
+    
+    func contentOffsetDidChange() {
     }
 }

@@ -11,118 +11,183 @@ import UIKit
 
 protocol AssetVideoScrollViewDelegate: class {
     func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->())
+    func didUpdateDimensions()
+    func contentOffsetDidChange()
 }
 
-class AssetVideoScrollView: UIScrollView {
+class AssetVideoScrollView: UIView {
 
-    public weak var framesDelegate: AssetVideoScrollViewDelegate?
+    public weak var delegate: AssetVideoScrollViewDelegate?
     
-    private var widthConstraint: NSLayoutConstraint?
-
-    let contentView = UIView()
-    var maxDuration: Double = 15
-    private var thumbnailFrameAspectRatio: CGFloat?
-    private var duration: TimeInterval?
+    let collectionView: UICollectionView
+    let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+    var maxOnscreenDuration: Double = 1800
+    fileprivate var thumbnailFrameAspectRatio: CGFloat?
+    fileprivate var duration: TimeInterval?
+    fileprivate var thumbnailTimes: [NSValue] = []
+    fileprivate var thumbnailSize: CGSize = CGSize.zero
+    fileprivate var contentWidth: CGFloat = 0
+    fileprivate var lastWidth: CGFloat?
+    fileprivate var lastContentOffset: CGFloat = 0
+    fileprivate var horizontalInset: CGFloat = 15
+    
+    var contentSize: CGSize {
+        return collectionView.contentSize
+    }
+    
+    var contentOffset: CGPoint {
+        return collectionView.contentOffset
+    }
+    
+    var realContentSize: CGSize {
+        return CGSize(width: collectionView.contentSize.width - 2 * horizontalInset,
+                      height: collectionView.contentSize.height)
+    }
+    
+    var leftOnScreenInset: CGFloat {
+        guard collectionView.contentOffset.x < horizontalInset else {
+            return 0
+        }
+        
+        return horizontalInset - collectionView.contentOffset.x
+    }
+    
+    var rightOnScreenInset: CGFloat {
+        guard collectionView.contentOffset.x + bounds.width > contentWidth + horizontalInset else {
+            return 0
+        }
+        
+        let offScreenInset = collectionView.contentSize.width - ( collectionView.contentOffset.x + bounds.width)
+        return horizontalInset - offScreenInset
+    }
     
     override init(frame: CGRect) {
+        collectionView = UICollectionView(frame: CGRect.zero, collectionViewLayout: layout)
         super.init(frame: frame)
         setupSubviews()
     }
 
     required init?(coder aDecoder: NSCoder) {
+        collectionView = UICollectionView(frame: CGRect.zero, collectionViewLayout: layout)
         super.init(coder: aDecoder)
         setupSubviews()
+    }
+    
+    deinit {
+        collectionView.removeObserver(self, forKeyPath: "contentOffset")
     }
 
     private func setupSubviews() {
         backgroundColor = .clear
-        showsVerticalScrollIndicator = false
-        showsHorizontalScrollIndicator = false
         clipsToBounds = true
 
-        contentView.backgroundColor = .clear
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.tag = -1
-        addSubview(contentView)
+        collectionView.backgroundColor = .clear
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.tag = -1
+        collectionView.showsVerticalScrollIndicator = false
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.bounces = false
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 0
+        layout.minimumInteritemSpacing = 0
+        layout.sectionInset = UIEdgeInsets(top: 0, left: horizontalInset, bottom: 0, right: horizontalInset)
+        
+        collectionView.register(ThumbnailCell.self, forCellWithReuseIdentifier: String(describing: ThumbnailCell))
+        
+        addSubview(collectionView)
 
-        contentView.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
-        contentView.topAnchor.constraint(equalTo: topAnchor).isActive = true
-        contentView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
-        widthConstraint = contentView.widthAnchor.constraint(equalTo: widthAnchor, multiplier: 1.0)
-        widthConstraint?.isActive = true
+        collectionView.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
+        collectionView.topAnchor.constraint(equalTo: topAnchor).isActive = true
+        collectionView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+        collectionView.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
+        
+        collectionView.addObserver(self, forKeyPath: "contentOffset", options: .new, context: nil)
     }
-
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        guard let keyPath = keyPath, keyPath == "contentOffset" else {
+            return
+        }
+        
+        delegate?.contentOffsetDidChange()
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
-        contentSize = contentView.bounds.size
+        
+        defer {
+            self.lastWidth = bounds.width
+        }
+       
         guard let duration = duration, let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
             return
         }
-        recalculateThumbnailTimes(for: duration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
-    }
-
-    internal func recalculateThumbnailTimes(for duration: TimeInterval, thumbnailFrameAspectRatio: CGFloat) {
-        guard
-            let thumbnailSize = getThumbnailFrameSize(for: thumbnailFrameAspectRatio),
-            thumbnailSize.height.isNormal,
-            thumbnailSize.width.isNormal else {
+        
+        guard let lastWidth = lastWidth else {
+            recalculateThumbnailTimes(for: duration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
             return
         }
         
+        guard lastWidth != bounds.width else {
+            return
+        }
+        
+        lastContentOffset = collectionView.contentOffset.x
+        recalculateThumbnailTimes(for: duration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
+        recalculateContentOffset(lastWidth)
+    }
+    
+    private func recalculateContentOffset(_ lastWidth: CGFloat) {
+        let ratio = bounds.width / lastWidth
+        guard lastContentOffset > horizontalInset else {
+            return
+        }
+        
+        collectionView.contentOffset = CGPoint(x: (lastContentOffset - horizontalInset) * ratio + horizontalInset,
+                                               y: collectionView.contentOffset.y)
+    }
+
+    internal func recalculateThumbnailTimes(for duration: TimeInterval, thumbnailFrameAspectRatio: CGFloat) {
+        let thumbnailSize = self.thumbnailSize(for: thumbnailFrameAspectRatio)
+        guard
+            thumbnailSize.height.isNormal,
+            thumbnailSize.width.isNormal else {
+                return
+        }
+        
+        self.thumbnailSize = thumbnailSize
         self.thumbnailFrameAspectRatio = thumbnailFrameAspectRatio
         self.duration = duration
         
-        removeFormerThumbnails()
-        let newContentSize = frame.size  // setContentSize(for: asset)
-        let visibleThumbnailsCount = Int(ceil(frame.width / thumbnailSize.width))
-        let thumbnailCount =  thumbnailSize.width > 0 ? Int(ceil(newContentSize.width / thumbnailSize.width)) : 0
-        addThumbnailViews(thumbnailCount, size: thumbnailSize)
-        let thumbnailTimes = getThumbnailTimes(for: duration, numberOfThumbnails: thumbnailCount)
-        generateImages(at: thumbnailTimes, with: thumbnailSize, visibleThumnails: thumbnailCount)
+        let thumbnailCount = self.thumbnailCount(for: duration)
+        thumbnailTimes = thumbnailTimes(for: duration, numberOfThumbnails: thumbnailCount)
+        self.collectionView.reloadData()
+        self.collectionView.performBatchUpdates(nil) { _ in
+            self.delegate?.didUpdateDimensions()
+        }
+    }
+    
+    private func thumbnailCount(for duration: TimeInterval) -> Int {
+        let contentWidthFactor = CGFloat(max(1, duration / maxOnscreenDuration))
+        contentWidth = bounds.width * contentWidthFactor
+        guard let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
+            return 0
+        }
+        let thumbnailSize = self.thumbnailSize(for: thumbnailFrameAspectRatio)
+        let thumbnailCount =  thumbnailSize.width > 0 ? Int(ceil(contentWidth / thumbnailSize.width)) : 0
+        return thumbnailCount
     }
 
-    private func getThumbnailFrameSize(for aspectRatio: CGFloat) -> CGSize? {
-        let height = frame.height
+    private func thumbnailSize(for aspectRatio: CGFloat) -> CGSize {
+        let height = bounds.height
         let width = height * aspectRatio
         return CGSize(width: fabs(width), height: fabs(height))
     }
 
-    private func removeFormerThumbnails() {
-        contentView.subviews.forEach({ $0.removeFromSuperview() })
-    }
-
-    private func setContentSize(for asset: AVAsset) -> CGSize {
-        let contentWidthFactor = CGFloat(max(1, asset.duration.seconds / maxDuration))
-        widthConstraint?.isActive = false
-        widthConstraint = contentView.widthAnchor.constraint(equalTo: widthAnchor, multiplier: contentWidthFactor)
-        widthConstraint?.isActive = true
-        layoutIfNeeded()
-        return contentView.bounds.size
-    }
-
-    private func addThumbnailViews(_ count: Int, size: CGSize) {
-        for index in 0..<count {
-
-            let thumbnailView = UIImageView(frame: CGRect.zero)
-            thumbnailView.clipsToBounds = true
-
-            let viewEndX = CGFloat(index) * size.width + size.width
-
-            if viewEndX > contentView.frame.width {
-                thumbnailView.frame.size = CGSize(width: size.width + (contentView.frame.width - viewEndX), height: size.height)
-                thumbnailView.contentMode = .scaleAspectFill
-            } else {
-                thumbnailView.frame.size = size
-                thumbnailView.contentMode = .scaleAspectFit
-            }
-
-            thumbnailView.frame.origin = CGPoint(x: CGFloat(index) * size.width, y: 0)
-            thumbnailView.tag = index
-            contentView.addSubview(thumbnailView)
-        }
-    }
-
-    private func getThumbnailTimes(for duration: TimeInterval, numberOfThumbnails: Int) -> [NSValue] {
+    private func thumbnailTimes(for duration: TimeInterval, numberOfThumbnails: Int) -> [NSValue] {
         let timeIncrement = (duration * 1000) / Double(numberOfThumbnails)
         var timesForThumbnails = [NSValue]()
         for index in 0..<numberOfThumbnails {
@@ -132,37 +197,106 @@ class AssetVideoScrollView: UIScrollView {
         }
         return timesForThumbnails
     }
+}
 
-    private func generateImages(at times: [NSValue], with maximumSize: CGSize, visibleThumnails: Int) {
-        let scaledSize = CGSize(width: maximumSize.width * UIScreen.main.scale,
-                                height: maximumSize.height *  UIScreen.main.scale)
-        var count = 0
+extension AssetVideoScrollView {
+    
+    func time(from position: CGFloat) -> CMTime? {
+        guard let rideDuration = duration else {
+            return nil
+        }
+        
+        let position = position - horizontalInset
+        
+        let normalizedRatio = max(min(1, position / realContentSize.width), 0)
+        let positionTimeValue = Double(normalizedRatio) * rideDuration
+        return CMTime(value: Int64(positionTimeValue), timescale: 1)
+    }
+}
 
-        for time in times {
-            framesDelegate?.thumbnailFor(time.timeValue) { image in
-                DispatchQueue.main.async { [weak self] () -> Void in
-                    guard let image = image else {
-                        return
-                    }
-                    if count == 0 {
-                        self?.displayFirstImage(image, visibleThumbnails: visibleThumnails)
-                    }
-                    self?.displayImage(image, at: count)
-                    count += 1
+extension AssetVideoScrollView: UICollectionViewDataSource {
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return thumbnailTimes.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ThumbnailCell), for: indexPath) as? ThumbnailCell else {
+            return UICollectionViewCell()
+        }
+        
+        cell.indexPath = indexPath
+        
+        let time = thumbnailTimes[indexPath.item]
+        
+        delegate?.thumbnailFor(time.timeValue) { image in
+            DispatchQueue.main.async { [weak self, weak cell] () -> Void in
+                guard
+                    let cell = cell,
+                    let cellIndexPath = cell.indexPath,
+                    indexPath == cellIndexPath else {
+                    return
                 }
+                
+                guard let image = image else {
+                    return
+                }
+                
+                cell.imageView.image = image
             }
         }
+        
+        return cell
     }
+}
 
-    private func displayFirstImage(_ image: UIImage, visibleThumbnails: Int) {
-        for i in 0...visibleThumbnails {
-            displayImage(image, at: i)
-        }
+extension AssetVideoScrollView: UICollectionViewDelegateFlowLayout {
+    
+    private func isLast(_ indexPath: IndexPath) -> Bool {
+        return indexPath.item == thumbnailTimes.count - 1
     }
-
-    private func displayImage(_ image: UIImage, at index: Int) {
-        if let imageView = contentView.viewWithTag(index) as? UIImageView {
-            imageView.image = image
+    
+    private func lastCellSize() -> CGSize {
+        let height = thumbnailSize.height
+        let width = contentWidth - CGFloat(thumbnailTimes.count - 1) * thumbnailSize.width
+        return CGSize(width: width, height: height)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        guard let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
+            return CGSize.zero
         }
+        
+        guard !isLast(indexPath) else {
+            return lastCellSize()
+        }
+        
+        return thumbnailSize
+    }
+}
+
+class ThumbnailCell: UICollectionViewCell {
+    
+    let imageView = UIImageView()
+    var indexPath: IndexPath?
+    
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        commonSetup()
+    }
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        commonSetup()
+    }
+    
+    private func commonSetup() {
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(imageView)
+        
+        imageView.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
+        imageView.topAnchor.constraint(equalTo: topAnchor).isActive = true
+        imageView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+        imageView.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
     }
 }
