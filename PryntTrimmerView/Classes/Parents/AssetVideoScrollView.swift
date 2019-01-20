@@ -238,10 +238,6 @@ extension AssetVideoScrollView: UICollectionViewDataSource {
                     return
                 }
                 
-                guard let image = image else {
-                    return
-                }
-                
                 cell.imageView.image = image
             }
         }
