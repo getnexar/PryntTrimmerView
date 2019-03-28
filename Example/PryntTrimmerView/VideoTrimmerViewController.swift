@@ -49,7 +49,7 @@ class VideoTrimmerViewController: AssetSelectionViewController {
 
     override func loadAsset(_ asset: AVAsset) {
 
-        trimmerView.asset = asset
+//        trimmerView.asset = asset
         trimmerView.delegate = self
         addVideoPlayer(with: asset, playerView: playerView)
     }
@@ -99,15 +99,24 @@ class VideoTrimmerViewController: AssetSelectionViewController {
         trimmerView.seek(to: playBackTime)
 
         if playBackTime >= endTime {
-            player.seek(to: startTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
+            player.seek(to: startTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
             trimmerView.seek(to: startTime)
         }
     }
 }
 
 extension VideoTrimmerViewController: TrimmerViewDelegate {
+    func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle) {
+    }
+    
+    func positionBarStoppedMoving(triggeredHandle: TrimmerView.TriggeredHandle) {
+    }
+    
+    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?) -> ()) {
+    }
+    
     func positionBarStoppedMoving(_ playerTime: CMTime) {
-        player?.seek(to: playerTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
+        player?.seek(to: playerTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
         player?.play()
         startPlaybackTimeChecker()
     }
@@ -115,7 +124,7 @@ extension VideoTrimmerViewController: TrimmerViewDelegate {
     func didChangePositionBar(_ playerTime: CMTime) {
         stopPlaybackTimeChecker()
         player?.pause()
-        player?.seek(to: playerTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
+        player?.seek(to: playerTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
         let duration = (trimmerView.endTime! - trimmerView.startTime!).seconds
         print(duration)
     }

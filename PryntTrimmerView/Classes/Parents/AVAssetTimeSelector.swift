@@ -92,9 +92,9 @@ extension AVAssetTimeSelector: AssetVideoScrollViewDelegate {
         delegate?.thumbnailFor(imageTime, completion: completion)
     }
     
-    func didUpdateDimensions() {
+    @objc func didUpdateDimensions() {
     }
     
-    func contentOffsetDidChange() {
+    @objc func contentOffsetDidChange() {
     }
 }

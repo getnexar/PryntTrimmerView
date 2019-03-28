@@ -95,7 +95,7 @@ class AssetVideoScrollView: UIView {
         layout.minimumInteritemSpacing = 0
         layout.sectionInset = UIEdgeInsets(top: 0, left: horizontalInset, bottom: 0, right: horizontalInset)
         
-        collectionView.register(ThumbnailCell.self, forCellWithReuseIdentifier: String(describing: ThumbnailCell))
+        collectionView.register(ThumbnailCell.self, forCellWithReuseIdentifier: String(describing: ThumbnailCell.self))
         
         addSubview(collectionView)
 
@@ -221,7 +221,7 @@ extension AssetVideoScrollView: UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ThumbnailCell), for: indexPath) as? ThumbnailCell else {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: String(describing: ThumbnailCell.self), for: indexPath) as? ThumbnailCell else {
             return UICollectionViewCell()
         }
         
@@ -230,7 +230,7 @@ extension AssetVideoScrollView: UICollectionViewDataSource {
         let time = thumbnailTimes[indexPath.item]
         
         delegate?.thumbnailFor(time.timeValue) { image in
-            DispatchQueue.main.async { [weak self, weak cell] () -> Void in
+            DispatchQueue.main.async { [weak cell] () -> Void in
                 guard
                     let cell = cell,
                     let cellIndexPath = cell.indexPath,
@@ -259,7 +259,7 @@ extension AssetVideoScrollView: UICollectionViewDelegateFlowLayout {
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        guard let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
+        guard thumbnailFrameAspectRatio != nil else {
             return CGSize.zero
         }
         

@@ -114,8 +114,8 @@ public class ThumbSelectorView: AVAssetTimeSelector {
     private func setupThumbnailGenerator(with asset: AVAsset) {
         generator = AVAssetImageGenerator(asset: asset)
         generator?.appliesPreferredTrackTransform = true
-        generator?.requestedTimeToleranceAfter = kCMTimeZero
-        generator?.requestedTimeToleranceBefore = kCMTimeZero
+        generator?.requestedTimeToleranceAfter = CMTime.zero
+        generator?.requestedTimeToleranceBefore = CMTime.zero
         generator?.maximumSize = getThumbnailFrameSize(from: asset) ?? CGSize.zero
     }
 
