@@ -65,7 +65,7 @@ class VideoScrollView: UIView {
         player = AVPlayer(playerItem: playerItem)
         playerLayer = AVPlayerLayer(player: player)
         playerLayer?.frame = playerFrame
-        playerLayer?.videoGravity = AVLayerVideoGravityResizeAspectFill
+        playerLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
 
         contentView.frame = playerFrame
         contentView.layer.addSublayer(playerLayer!)
