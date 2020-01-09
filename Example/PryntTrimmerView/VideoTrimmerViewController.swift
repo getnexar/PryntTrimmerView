@@ -108,13 +108,13 @@ class VideoTrimmerViewController: AssetSelectionViewController {
 extension VideoTrimmerViewController: TrimmerViewDelegate {
     func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle) {
     }
-    
+
     func positionBarStoppedMoving(triggeredHandle: TrimmerView.TriggeredHandle) {
     }
-    
-    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?) -> ()) {
+
+    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?) -> Void) {
     }
-    
+
     func positionBarStoppedMoving(_ playerTime: CMTime) {
         player?.seek(to: playerTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
         player?.play()

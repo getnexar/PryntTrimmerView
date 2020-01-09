@@ -10,7 +10,7 @@ import UIKit
 import AVFoundation
 
 public protocol AVAssetTimeSelectorDelegate: class {
-    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->())
+    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->Void)
 }
 
 /// A generic class to display an asset into a scroll view with thumbnail images, and make the equivalence between a time in
@@ -20,13 +20,13 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
     public weak var delegate: AVAssetTimeSelectorDelegate?
 
     let assetPreview = AssetVideoScrollView()
-    
+
     public var rideDuration: Double? {
         didSet {
             propertiesDidChange()
         }
     }
-    
+
     public var thumbnailFrameAspectRatio: CGFloat? {
         didSet {
             propertiesDidChange()
@@ -67,7 +67,7 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
         guard let rideDuration = rideDuration, let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
             return
         }
-        
+
         assetPreview.recalculateThumbnailTimes(for: rideDuration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
     }
 
@@ -87,14 +87,14 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
 }
 
 extension AVAssetTimeSelector: AssetVideoScrollViewDelegate {
-    
-    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->()) {
+
+    func thumbnailFor(_ imageTime: CMTime, completion: @escaping (UIImage?)->Void) {
         delegate?.thumbnailFor(imageTime, completion: completion)
     }
-    
+
     @objc func didUpdateDimensions() {
     }
-    
+
     @objc func contentOffsetDidChange() {
     }
 }
