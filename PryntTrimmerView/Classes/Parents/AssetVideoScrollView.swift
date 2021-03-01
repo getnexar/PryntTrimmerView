@@ -58,15 +58,11 @@ class AssetVideoScrollView: UIView {
         guard collectionView.contentOffset.x < horizontalInset else {
             return 0
         }
-        let x = horizontalInset - collectionView.contentOffset.x
-        return x
+
+        return horizontalInset - collectionView.contentOffset.x
     }
 
     var rightOnScreenInset: CGFloat {
-        let content = contentWidth
-        let size = realContentSize.width
-        let c = contentSize.width
-        let z = collectionView.contentOffset.x
         guard collectionView.contentOffset.x + bounds.width > contentWidth + horizontalInset else {
             return 0
         }
