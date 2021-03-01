@@ -106,6 +106,9 @@ class VideoTrimmerViewController: AssetSelectionViewController {
 }
 
 extension VideoTrimmerViewController: TrimmerViewDelegate {
+    func trimmerHandleMoving(triggerHandle: TrimmerView.TriggeredHandle) {
+    }
+    
     func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle) {
     }
 

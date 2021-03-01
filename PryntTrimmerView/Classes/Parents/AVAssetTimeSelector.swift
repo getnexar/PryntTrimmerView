@@ -15,7 +15,7 @@ public protocol AVAssetTimeSelectorDelegate: class {
 
 /// A generic class to display an asset into a scroll view with thumbnail images, and make the equivalence between a time in
 // the asset and a position in the scroll view
-public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
+public class AVAssetTimeSelector: UIView {
 
     public weak var delegate: AVAssetTimeSelectorDelegate?
 
@@ -28,6 +28,12 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
     }
 
     public var thumbnailFrameAspectRatio: CGFloat? {
+        didSet {
+            propertiesDidChange()
+        }
+    }
+    
+    public var zoomFactor: CGFloat? {
         didSet {
             propertiesDidChange()
         }
@@ -64,11 +70,13 @@ public class AVAssetTimeSelector: UIView, UIScrollViewDelegate {
     }
 
     func propertiesDidChange() {
-        guard let rideDuration = rideDuration, let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
+        guard let rideDuration = rideDuration,
+              let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio,
+              let zoomFactor = zoomFactor else {
             return
         }
 
-        assetPreview.recalculateThumbnailTimes(for: rideDuration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio)
+        assetPreview.recalculateThumbnailTimes(for: rideDuration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio, zoomFactor: zoomFactor)
     }
 
     // MARK: - Time & Position Equivalence
