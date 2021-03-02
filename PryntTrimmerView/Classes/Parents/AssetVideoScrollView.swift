@@ -28,6 +28,7 @@ class AssetVideoScrollView: UIView {
         didSet {
             guard zoomFactor != oldValue else { return }
             if (zoomFactor == 1) {
+                collectionView.contentOffset.x = 0
                 collectionView.isScrollEnabled = false
             } else {
                 collectionView.isScrollEnabled = true
