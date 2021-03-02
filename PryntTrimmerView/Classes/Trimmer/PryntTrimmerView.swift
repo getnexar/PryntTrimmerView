@@ -172,21 +172,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     // MARK: - View & constraints configurations
 
     override func didUpdateDimensions() {
-        initializeHandles()
+        initializeHandleTimes()
         refreshHandles()
-    }
-
-    private func initializeHandles() {
-        guard
-            let leftConstraint = leftConstraint,
-            let rightConstraint = rightConstraint,
-            leftConstraint.constant == 0,
-            rightConstraint.constant == 0 else {
-            return
-        }
-        startTime = time(from: 0)
-        endTime = time(from: assetPreview.bounds.width)
-        layoutSubviews()
     }
 
     override func contentOffsetDidChange() {
@@ -204,7 +191,20 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupGestures()
         updateMainColor()
         updateHandleColor()
-        initializeHandles()
+    }
+    
+    public func initializeHandleTimes() {
+        guard
+            let leftConstraint = leftConstraint,
+            let rightConstraint = rightConstraint,
+            leftConstraint.constant == 0,
+            rightConstraint.constant == 0,
+            let rideDuration = rideDuration else {
+            return
+        }
+        startTime = CMTimeMake(value: 0, timescale: 1)
+        endTime = CMTime(value: Int64(rideDuration), timescale: 1)
+        layoutSubviews()
     }
     
     public func setUpUI(mainColor: UIColor,
