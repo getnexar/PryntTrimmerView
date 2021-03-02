@@ -24,7 +24,7 @@ class AssetVideoScrollView: UIView {
     var maxOnscreenDuration: Double = 1800
     fileprivate var thumbnailFrameAspectRatio: CGFloat?
     fileprivate var duration: TimeInterval?
-    fileprivate var zoomFactor: CGFloat? {
+    fileprivate var zoomFactor: CGFloat? = 1 {
         didSet {
             guard zoomFactor != oldValue else { return }
             if (zoomFactor == 1) {
