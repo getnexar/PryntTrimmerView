@@ -80,7 +80,7 @@ public class TimeLabelView: UIView {
 public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle)
     func positionBarStoppedMoving(triggeredHandle: TrimmerView.TriggeredHandle)
-    func trimmerHandleMoving(triggerHandle: TrimmerView.TriggeredHandle)
+    func trimmerHandleDidMove(triggerHandle: TrimmerView.TriggeredHandle)
 }
 
 /// A view to select a specific time range of a video. It consists of an asset preview with thumbnails inside a scroll view, two
@@ -174,29 +174,27 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     // MARK: - View & constraints configurations
 
     override func didUpdateDimensions() {
+        initializeHandles()
         refreshHandles()
+    }
+
+    private func initializeHandles() {
+        guard
+            let leftConstraint = leftConstraint,
+            let rightConstraint = rightConstraint,
+            leftConstraint.constant == 0,
+            rightConstraint.constant == 0 else {
+            return
+        }
+        leftConstraint.constant = handleWidth
+        rightConstraint.constant = -handleWidth
+        layoutSubviews()
     }
 
     override func contentOffsetDidChange() {
         leftMaskConstraint?.constant = assetPreview.leftOnScreenInset
         rightMaskConstraint?.constant = -assetPreview.rightOnScreenInset
         refreshHandles()
-    }
-
-    private func updateConstraints(_ newWidth: CGFloat, _ lastWidth: CGFloat) {
-        guard
-            let leftConstraint = leftConstraint,
-            let rightConstraint = rightConstraint else {
-                return
-        }
-
-        let leftOnScreenInset = assetPreview.leftOnScreenInset
-        let rightOnScreenInset = assetPreview.rightOnScreenInset
-        let ratio = (newWidth - leftOnScreenInset - rightOnScreenInset) / (lastWidth - leftOnScreenInset - rightOnScreenInset)
-        leftConstraint.constant = ratio * (leftConstraint.constant - leftOnScreenInset) + leftOnScreenInset
-        rightConstraint.constant = ratio * (rightConstraint.constant + rightOnScreenInset) - rightOnScreenInset
-
-        layoutSubviews()
     }
 
     override func setupSubviews() {
@@ -209,23 +207,10 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupGestures()
         updateMainColor()
         updateHandleColor()
+        startTime = time(from: 0)
+        endTime = time(from: assetPreview.bounds.width)
     }
-
-    private func initializeHandles() {
-        guard
-            let leftConstraint = leftConstraint,
-            let rightConstraint = rightConstraint,
-            leftConstraint.constant == 0,
-            rightConstraint.constant == 0 else {
-            return
-        }
-        leftConstraint.constant = handleWidth
-        rightConstraint.constant = min(leftConstraint.constant + minimumDistanceBetweenHandle - frame.width, -handleWidth)
-        layoutSubviews()
-        fixHandlesLabelsPositionIfNeeded()
-        layoutSubviews()
-    }
-
+    
     override func constrainAssetPreview() {
         assetPreview.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
         assetPreview.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
@@ -288,6 +273,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         leftHandleView.addSubview(leftHandleLabel)
         leftHandleLabel.bottomAnchor.constraint(equalTo: leftHandleView.topAnchor, constant: -40).isActive = true
         leftHandleLabel.centerXAnchor.constraint(equalTo: leftHandleView.centerXAnchor, constant: -35).isActive = true
+        leftHandleLabel.isHidden = true
 
         leftHandleKnob.heightAnchor.constraint(equalToConstant: 24).isActive = true
         leftHandleKnob.widthAnchor.constraint(equalToConstant: 8).isActive = true
@@ -316,6 +302,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightHandleView.addSubview(rightHandleLabel)
         rightHandleLabel.bottomAnchor.constraint(equalTo: rightHandleView.topAnchor, constant: -40).isActive = true
         rightHandleLabel.centerXAnchor.constraint(equalTo: rightHandleView.centerXAnchor, constant: -35).isActive = true
+        rightHandleLabel.isHidden = true
 
         rightHandleKnob.heightAnchor.constraint(equalToConstant: 24).isActive = true
         rightHandleKnob.widthAnchor.constraint(equalToConstant: 8).isActive = true
@@ -384,11 +371,9 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             changeHandleStateColor(color: pressedMainColor)
             if view == leftHandleView {
                 currentLeftConstraint = leftConstraint!.constant
-                rightHandleLabel.isHidden = true
                 leftHandleLabel.isHidden = false
             } else if view == rightHandleView {
                 currentRightConstraint = rightConstraint!.constant
-                leftHandleLabel.isHidden = true
                 rightHandleLabel.isHidden = false
             } else {
                 currentLeftConstraint = leftConstraint!.constant
@@ -397,27 +382,27 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
                 leftHandleLabel.isHidden = false
                 rightHandleLabel.isHidden = false
             }
-            updateSelectedTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
+            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
         case .changed:
             let translation = gestureRecognizer.translation(in: superView)
             if view == leftHandleView {
                 updateLeftConstraint(with: translation)
             } else if view == rightHandleView {
                 updateRightConstraint(with: translation)
+                
             } else {
                 updateLeftConstraint(with: translation)
                 updateRightConstraint(with: translation)
             }
-            fixHandlesLabelsPositionIfNeeded()
             if let startTime = startTime, view == leftHandleView {
                 seek(to: startTime)
             } else if let endTime = endTime {
                 seek(to: endTime)
             }
-            updateSelectedTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
+            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
 
         case .cancelled, .ended, .failed:
-            updateSelectedTime(stoppedMoving: true, triggeredHandle: triggeredHandle)
+            updateSelectedPositionTime(stoppedMoving: true, triggeredHandle: triggeredHandle)
             leftHandleLabel.isHidden = true
             rightHandleLabel.isHidden = true
             changeHandleStateColor(color: mainColor)
@@ -433,7 +418,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             newConstraint = minConstraint
         }
         
-        startTime = time(from: assetPreview.contentOffset.x + newConstraint)
         var offset: CGFloat = 0
         if newConstraint < 25 {
             offset = -25
@@ -444,6 +428,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             assetPreview.collectionView.contentOffset.x += offset
             assetPreview.layoutSubviews()
         }
+        startTime = time(from: assetPreview.contentOffset.x + newConstraint)
+
         layoutSubviews()
 
     }
@@ -459,7 +445,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             newConstraint = minConstraint
         }
 
-        endTime = time(from: assetPreview.contentOffset.x + assetPreview.bounds.width + newConstraint)
         var offset: CGFloat = 0
         if newConstraint < -assetPreview.bounds.width + 25 {
             offset = -25
@@ -475,10 +460,17 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             assetPreview.collectionView.contentOffset.x += 25
             assetPreview.layoutSubviews()
         }
+        endTime = time(from: assetPreview.contentOffset.x + assetPreview.bounds.width + newConstraint)
+
         layoutSubviews()
     }
+    
+    private func getTime(timeInSeconds: Double) -> String {
+      let seconds = timeInSeconds.truncatingRemainder(dividingBy: 60)
+      let minutes = (timeInSeconds / 60)
+      return String(format:"%.0fm %.0fs",minutes, seconds);
     }
-
+    
     // MARK: - Time Equivalence
 
     /// Move the position bar to the given time.
@@ -505,9 +497,10 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
     
     public func adjustStartHandle() {
-        guard let lastStartTime = startTime,
-              let position = position(from: lastStartTime) else { return }
+        guard let startTime = startTime,
+              let position = position(from: startTime) else { return }
         leftConstraint?.constant = position - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+        leftHandleLabel.text = getTime(timeInSeconds: CMTimeGetSeconds(startTime))
     }
     
     /// The selected end time for the current asset.
@@ -518,13 +511,13 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
     
     public func adjustEndHandle() {
-        guard let lastEndTime = endTime,
-              let position = position(from: lastEndTime) else { return }
-        let constant = position - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
-
-        rightConstraint?.constant = constant
+        guard let endTime = endTime,
+              let position = position(from: endTime) else { return }
+        rightConstraint?.constant = position - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+        rightHandleLabel.text = getTime(timeInSeconds: CMTimeGetSeconds(endTime))
     }
-    private func updateSelectedTime(stoppedMoving: Bool, triggeredHandle: TriggeredHandle) {
+        
+    private func updateSelectedPositionTime(stoppedMoving: Bool, triggeredHandle: TriggeredHandle) {
         if stoppedMoving {
             trimmerDelegate?.positionBarStoppedMoving(triggeredHandle: triggeredHandle)
         } else {
