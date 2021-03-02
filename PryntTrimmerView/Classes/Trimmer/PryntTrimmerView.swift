@@ -186,8 +186,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             rightConstraint.constant == 0 else {
             return
         }
-        leftConstraint.constant = handleWidth
-        rightConstraint.constant = -handleWidth
+        startTime = time(from: 0)
+        endTime = time(from: assetPreview.bounds.width)
         layoutSubviews()
     }
 
@@ -207,8 +207,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupGestures()
         updateMainColor()
         updateHandleColor()
-        startTime = time(from: 0)
-        endTime = time(from: assetPreview.bounds.width)
     }
     
     override func constrainAssetPreview() {
@@ -272,7 +270,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         leftHandleLabel.translatesAutoresizingMaskIntoConstraints = false
         leftHandleView.addSubview(leftHandleLabel)
         leftHandleLabel.bottomAnchor.constraint(equalTo: leftHandleView.topAnchor, constant: -40).isActive = true
-        leftHandleLabel.centerXAnchor.constraint(equalTo: leftHandleView.centerXAnchor, constant: -35).isActive = true
+        leftHandleLabel.centerXAnchor.constraint(equalTo: leftHandleView.centerXAnchor, constant: -15).isActive = true
         leftHandleLabel.isHidden = true
 
         leftHandleKnob.heightAnchor.constraint(equalToConstant: 24).isActive = true
@@ -301,7 +299,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightHandleLabel.translatesAutoresizingMaskIntoConstraints = false
         rightHandleView.addSubview(rightHandleLabel)
         rightHandleLabel.bottomAnchor.constraint(equalTo: rightHandleView.topAnchor, constant: -40).isActive = true
-        rightHandleLabel.centerXAnchor.constraint(equalTo: rightHandleView.centerXAnchor, constant: -35).isActive = true
+        rightHandleLabel.centerXAnchor.constraint(equalTo: rightHandleView.centerXAnchor, constant: -24).isActive = true
         rightHandleLabel.isHidden = true
 
         rightHandleKnob.heightAnchor.constraint(equalToConstant: 24).isActive = true
@@ -418,18 +416,18 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             newConstraint = minConstraint
         }
         
-        var offset: CGFloat = 0
-        if newConstraint < 25 {
-            offset = -25
-        } else if newConstraint > assetPreview.bounds.width - 25 {
-            offset = 25
-        }
-        if zoomFactor != 1 {
+        if zoomFactor != 1 && assetPreview.contentOffset.x > 0 {
+            var offset: CGFloat = 0
+            if newConstraint < 35  {
+                offset = -25
+            } else if newConstraint > assetPreview.bounds.width - 35 {
+                offset = 25
+            }
             assetPreview.collectionView.contentOffset.x += offset
             assetPreview.layoutSubviews()
         }
+        
         startTime = time(from: assetPreview.contentOffset.x + newConstraint)
-
         layoutSubviews()
 
     }
@@ -444,31 +442,30 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         if newConstraint > minConstraint {
             newConstraint = minConstraint
         }
-
-        var offset: CGFloat = 0
-        if newConstraint < -assetPreview.bounds.width + 25 {
-            offset = -25
-        } else if newConstraint > -25 {
-            offset = 25
-        }
-        if zoomFactor != 1 {
+        
+        if zoomFactor != 1 && assetPreview.collectionView.contentOffset.x < assetPreview.realContentSize.width - assetPreview.bounds.width {
+            var offset: CGFloat = 0
+            if newConstraint < -assetPreview.bounds.width + 35  {
+                offset = -25
+            } else if newConstraint > -35  {
+                offset = 25
+            }
             assetPreview.collectionView.contentOffset.x += offset
             assetPreview.layoutSubviews()
         }
 
-        if (currentRightConstraint + translation.x) > -20 && zoomFactor != 1 {
-            assetPreview.collectionView.contentOffset.x += 25
-            assetPreview.layoutSubviews()
-        }
         endTime = time(from: assetPreview.contentOffset.x + assetPreview.bounds.width + newConstraint)
 
         layoutSubviews()
     }
     
     private func getTime(timeInSeconds: Double) -> String {
-      let seconds = timeInSeconds.truncatingRemainder(dividingBy: 60)
-      let minutes = (timeInSeconds / 60)
-      return String(format:"%.0fm %.0fs",minutes, seconds);
+        guard timeInSeconds >= 60 else {
+           return String(format:"%.0fs", timeInSeconds)
+        }
+        let seconds = timeInSeconds.truncatingRemainder(dividingBy: 60)
+        let minutes = (timeInSeconds / 60)
+        return String(format:"%.0fm %.0fs",minutes, seconds)
     }
     
     // MARK: - Time Equivalence
