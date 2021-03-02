@@ -105,16 +105,16 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     // MARK: Color Customization
 
     /// The color of the main border of the view
-    @IBInspectable public var mainColor: UIColor = UIColor.orange {
+    @IBInspectable private var mainColor: UIColor = UIColor.orange {
         didSet {
             updateMainColor()
         }
     }
     
-    @IBInspectable public var pressedMainColor: UIColor = UIColor.orange
+    @IBInspectable private var pressedMainColor: UIColor = UIColor.orange
 
     /// The color of the handles on the side of the view
-    @IBInspectable public var handleColor: UIColor = UIColor.gray {
+    @IBInspectable private var handleColor: UIColor = UIColor.gray {
         didSet {
            updateHandleColor()
         }
@@ -204,6 +204,44 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupGestures()
         updateMainColor()
         updateHandleColor()
+    }
+    
+    public func setUpUI(mainColor: UIColor,
+                        pressedMainColor: UIColor,
+                        maskBackgroundColor: UIColor,
+                        maskBorderColor: CGColor,
+                        handleColor: UIColor,
+                        labelFont: UIFont?,
+                        labelColor: UIColor) {
+        self.mainColor = mainColor
+        self.pressedMainColor = pressedMainColor
+        self.handleColor = handleColor
+        leftMaskView.backgroundColor = maskBackgroundColor
+        leftMaskView.layer.borderColor = maskBorderColor
+        rightMaskView.backgroundColor = maskBackgroundColor
+        rightMaskView.layer.borderColor = maskBorderColor
+        rightHandleLabel.font = labelFont
+        rightHandleLabel.color = labelColor
+        leftHandleLabel.font = labelFont
+        leftHandleLabel.color = labelColor
+    }
+
+    private func updateMainColor() {
+        changeHandleStateColor(color: mainColor)
+    }
+    
+    private func changeHandleStateColor(color: UIColor) {
+        topBorder.backgroundColor = color
+        bottomBorder.backgroundColor = color
+        leftHandleView.backgroundColor = color
+        rightHandleView.backgroundColor = color
+    }
+    
+    private func updateHandleColor() {
+        leftHandleKnob.tintColor = handleColor
+        leftHandleKnob.backgroundColor = .clear
+        rightHandleKnob.tintColor = handleColor
+        rightHandleKnob.backgroundColor = .clear
     }
     
     override func constrainAssetPreview() {
@@ -344,24 +382,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightHandleView.addGestureRecognizer(rightPanGestureRecognizer)
     }
 
-    private func updateMainColor() {
-        changeHandleStateColor(color: mainColor)
-    }
-    
-    private func changeHandleStateColor(color: UIColor) {
-        topBorder.backgroundColor = color
-        bottomBorder.backgroundColor = color
-        leftHandleView.backgroundColor = color
-        rightHandleView.backgroundColor = color
-    }
-    
-    private func updateHandleColor() {
-        leftHandleKnob.tintColor = handleColor
-        leftHandleKnob.backgroundColor = .clear
-        rightHandleKnob.tintColor = handleColor
-        rightHandleKnob.backgroundColor = .clear
-    }
-
     // MARK: - Trim Gestures
     @objc func handlePanGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let view = gestureRecognizer.view, let superView = gestureRecognizer.view?.superview else { return }
@@ -400,8 +420,9 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
             } else if let endTime = endTime {
                 seek(to: endTime)
             }
-            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
+            trimmerDelegate?.trimmerHandleDidMove(triggerHandle:triggeredHandle)
 
+            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
         case .cancelled, .ended, .failed:
             updateSelectedPositionTime(stoppedMoving: true, triggeredHandle: triggeredHandle)
             leftHandleLabel.isHidden = true
@@ -491,9 +512,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
     }
     
-    
     private func refreshMaskViews() {
-        
         guard let rideDuration = rideDuration,
               let startPosition = position(from: CMTime(seconds: 0, preferredTimescale: 1)),
               let endPosition = position(from: CMTime(seconds: rideDuration, preferredTimescale: 1)) else { return }
@@ -502,13 +521,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightMaskConstraint?.constant = endPosition - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
     }
     
-    public func setMaskColors(backgroundColor: UIColor, borderColor: CGColor) {
-        leftMaskView.backgroundColor = backgroundColor
-        leftMaskView.layer.borderColor = borderColor
-
-        rightMaskView.backgroundColor = backgroundColor
-        rightMaskView.layer.borderColor = borderColor
-    }
     private func refreshHandles() {
         adjustStartHandle()
         adjustEndHandle()
