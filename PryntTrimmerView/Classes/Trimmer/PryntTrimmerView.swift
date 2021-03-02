@@ -105,7 +105,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     // MARK: Color Customization
 
     /// The color of the main border of the view
-    @IBInspectable private var mainColor: UIColor = UIColor.orange {
+    @IBInspectable public var mainColor: UIColor = UIColor.orange {
         didSet {
             updateMainColor()
         }
@@ -114,7 +114,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     @IBInspectable private var pressedMainColor: UIColor = UIColor.orange
 
     /// The color of the handles on the side of the view
-    @IBInspectable private var handleColor: UIColor = UIColor.gray {
+    @IBInspectable public var handleColor: UIColor = UIColor.gray {
         didSet {
            updateHandleColor()
         }
@@ -421,7 +421,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
                 seek(to: endTime)
             }
             trimmerDelegate?.trimmerHandleDidMove(triggerHandle:triggeredHandle)
-
             updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
         case .cancelled, .ended, .failed:
             updateSelectedPositionTime(stoppedMoving: true, triggeredHandle: triggeredHandle)
