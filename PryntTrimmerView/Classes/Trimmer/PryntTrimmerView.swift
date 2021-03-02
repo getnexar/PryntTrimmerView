@@ -204,6 +204,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupGestures()
         updateMainColor()
         updateHandleColor()
+        initializeHandles()
     }
     
     public func setUpUI(mainColor: UIColor,
