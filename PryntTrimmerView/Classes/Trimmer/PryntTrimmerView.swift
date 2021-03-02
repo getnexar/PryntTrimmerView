@@ -169,8 +169,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
     }
 
-    private var lastWidth: CGFloat?
-
     // MARK: - View & constraints configurations
 
     override func didUpdateDimensions() {
@@ -192,8 +190,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     override func contentOffsetDidChange() {
-        leftMaskConstraint?.constant = assetPreview.leftOnScreenInset
-        rightMaskConstraint?.constant = -assetPreview.rightOnScreenInset
+        refreshMaskViews()
         refreshHandles()
     }
 
@@ -217,7 +214,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     private func setupTrimmerView() {
-        layer.cornerRadius = 2.0
+        assetPreview.layer.cornerRadius = 2.0
         trimView.layer.cornerRadius = 2.0
         trimView.translatesAutoresizingMaskIntoConstraints = false
         trimView.isUserInteractionEnabled = false
@@ -310,9 +307,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
     private func setupMaskView() {
         leftMaskView.isUserInteractionEnabled = false
-        leftMaskView.backgroundColor = .white
-        leftMaskView.alpha = 0.7
         leftMaskView.translatesAutoresizingMaskIntoConstraints = false
+        leftMaskView.layer.cornerRadius = 8.0
+        if #available(iOS 11.0, *) {
+            leftMaskView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+        }
+        leftMaskView.layer.borderWidth = 4
         insertSubview(leftMaskView, belowSubview: leftHandleView)
 
         leftMaskConstraint = leftMaskView.leftAnchor.constraint(equalTo: assetPreview.collectionView.leftAnchor, constant: assetPreview.leftOnScreenInset)
@@ -322,9 +322,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         leftMaskView.rightAnchor.constraint(equalTo: leftHandleView.centerXAnchor).isActive = true
 
         rightMaskView.isUserInteractionEnabled = false
-        rightMaskView.backgroundColor = .white
-        rightMaskView.alpha = 0.7
         rightMaskView.translatesAutoresizingMaskIntoConstraints = false
+        rightMaskView.layer.cornerRadius = 8.0
+        if #available(iOS 11.0, *) {
+            rightMaskView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+        }
+        rightMaskView.layer.borderWidth = 4
         insertSubview(rightMaskView, belowSubview: rightHandleView)
 
         rightMaskConstraint = rightMaskView.rightAnchor.constraint(equalTo: assetPreview.collectionView.rightAnchor, constant: -assetPreview.rightOnScreenInset)
@@ -488,6 +491,24 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
     }
     
+    
+    private func refreshMaskViews() {
+        
+        guard let rideDuration = rideDuration,
+              let startPosition = position(from: CMTime(seconds: 0, preferredTimescale: 1)),
+              let endPosition = position(from: CMTime(seconds: rideDuration, preferredTimescale: 1)) else { return }
+        
+        leftMaskConstraint?.constant = startPosition - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+        rightMaskConstraint?.constant = endPosition - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+    }
+    
+    public func setMaskColors(backgroundColor: UIColor, borderColor: CGColor) {
+        leftMaskView.backgroundColor = backgroundColor
+        leftMaskView.layer.borderColor = borderColor
+
+        rightMaskView.backgroundColor = backgroundColor
+        rightMaskView.layer.borderColor = borderColor
+    }
     private func refreshHandles() {
         adjustStartHandle()
         adjustEndHandle()

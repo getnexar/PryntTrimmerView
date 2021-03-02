@@ -217,12 +217,31 @@ extension AssetVideoScrollView: UICollectionViewDataSource {
             }
         }
 
+        if isFirst(indexPath) {
+            cell.imageView.layer.cornerRadius = 8.0
+            cell.imageView.clipsToBounds = true
+            if #available(iOS 11.0, *) {
+                cell.imageView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+            }
+
+        } else if isLast(indexPath) {
+            cell.imageView.layer.cornerRadius = 8.0
+            cell.imageView.clipsToBounds = true
+            if #available(iOS 11.0, *) {
+                cell.imageView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+            }
+        }
+        
         return cell
     }
 }
 
 extension AssetVideoScrollView: UICollectionViewDelegateFlowLayout {
 
+    private func isFirst(_ indexPath: IndexPath) -> Bool {
+        return indexPath.item == 0
+    }
+    
     private func isLast(_ indexPath: IndexPath) -> Bool {
         return indexPath.item == thumbnailTimes.count - 1
     }
