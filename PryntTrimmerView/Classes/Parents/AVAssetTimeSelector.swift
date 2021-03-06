@@ -32,10 +32,16 @@ public class AVAssetTimeSelector: UIView {
             propertiesDidChange()
         }
     }
-    
-    public var zoomFactor: CGFloat? {
+
+    public var minWidth: CGFloat? {
         didSet {
-            propertiesDidChange()
+            assetPreview.minWidth = minWidth
+        }
+    }
+    
+    public var maxWidth: CGFloat? {
+        didSet {
+            assetPreview.maxWidth = maxWidth
         }
     }
 
@@ -69,14 +75,13 @@ public class AVAssetTimeSelector: UIView {
         assetPreview.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
     }
 
-    func propertiesDidChange() {
+    func propertiesDidChange(widthIncrement: CGFloat = 0) {
         guard let rideDuration = rideDuration,
-              let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio,
-              let zoomFactor = zoomFactor else {
+              let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
             return
         }
 
-        assetPreview.recalculateThumbnailTimes(for: rideDuration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio, zoomFactor: zoomFactor)
+        assetPreview.recalculateThumbnailTimes(for: rideDuration, thumbnailFrameAspectRatio: thumbnailFrameAspectRatio, widthIncrement: widthIncrement)
     }
 
     // MARK: - Time & Position Equivalence

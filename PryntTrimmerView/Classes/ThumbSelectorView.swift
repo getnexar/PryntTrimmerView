@@ -105,7 +105,7 @@ public class ThumbSelectorView: AVAssetTimeSelector {
 
     // MARK: - Thumbnail Generation
 
-    override func propertiesDidChange() {
+    override func propertiesDidChange(widthIncrement: CGFloat = 0) {
         leftThumbConstraint?.constant = 0
         updateSelectedTime()
         super.propertiesDidChange()

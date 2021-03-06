@@ -24,19 +24,14 @@ class AssetVideoScrollView: UIView {
     var maxOnscreenDuration: Double = 1800
     fileprivate var thumbnailFrameAspectRatio: CGFloat?
     fileprivate var duration: TimeInterval?
-    fileprivate var zoomFactor: CGFloat? = 1 {
-        didSet {
-            guard zoomFactor != oldValue else { return }
-            if (zoomFactor == 1) {
-                collectionView.isScrollEnabled = false
-            } else {
-                collectionView.isScrollEnabled = true
-            }
-        }
-    }
+    
+    var minWidth: CGFloat?
+    var maxWidth: CGFloat?
+    
     fileprivate var thumbnailTimes: [NSValue] = []
     fileprivate var thumbnailSize: CGSize = CGSize.zero
-    fileprivate var contentWidth: CGFloat = 0
+    fileprivate(set) var contentWidth: CGFloat = 0
+
     fileprivate var lastWidth: CGFloat?
     fileprivate var lastContentOffset: CGFloat = 0
     public var horizontalInset: CGFloat = 20
@@ -125,7 +120,7 @@ class AssetVideoScrollView: UIView {
         delegate?.contentOffsetDidChange()
     }
 
-    internal func recalculateThumbnailTimes(for duration: TimeInterval, thumbnailFrameAspectRatio: CGFloat, zoomFactor: CGFloat) {
+    internal func recalculateThumbnailTimes(for duration: TimeInterval, thumbnailFrameAspectRatio: CGFloat, widthIncrement: CGFloat = 0) {
         let thumbnailSize = self.thumbnailSize(for: thumbnailFrameAspectRatio)
         guard
             thumbnailSize.height.isNormal,
@@ -136,18 +131,21 @@ class AssetVideoScrollView: UIView {
         self.thumbnailSize = thumbnailSize
         self.thumbnailFrameAspectRatio = thumbnailFrameAspectRatio
         self.duration = duration
-        self.zoomFactor = zoomFactor
 
-        let thumbnailCount = self.thumbnailCount(for: duration, zoomFactor: zoomFactor)
+        let thumbnailCount = self.thumbnailCount(for: duration, widthIncrement: widthIncrement)
         thumbnailTimes = thumbnailTimes(for: duration, numberOfThumbnails: thumbnailCount)
         self.collectionView.reloadData()
+        if contentWidth < UIScreen.main.bounds.width {
+            self.collectionView.setContentOffset(.zero, animated: false)
+        }
         self.collectionView.performBatchUpdates(nil) { _ in
             self.delegate?.didUpdateDimensions()
         }
     }
 
-    private func thumbnailCount(for duration: TimeInterval, zoomFactor: CGFloat) -> Int {
-        contentWidth = (UIScreen.main.bounds.width - 2 * horizontalInset - 2*20) * zoomFactor
+    private func thumbnailCount(for duration: TimeInterval, widthIncrement: CGFloat) -> Int {
+        guard let minWidth = minWidth, let maxWidth = maxWidth else { return 0 }
+        contentWidth = max(min(contentWidth + widthIncrement, maxWidth), minWidth)
         guard let thumbnailFrameAspectRatio = thumbnailFrameAspectRatio else {
             return 0
         }

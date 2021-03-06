@@ -137,13 +137,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     private let rightMaskView = UIView()
 
     // MARK: Constraints
-
-    private var currentLeftConstraint: CGFloat = 0
-    private var currentRightConstraint: CGFloat = 0
-    private var leftConstraint: NSLayoutConstraint?
-    private var rightConstraint: NSLayoutConstraint?
+    
+    private var currentLeftHandleConstraint: CGFloat = 0
+    private var currentRightHandleConstraint: CGFloat = 0
+    private var leftHandleConstraint: NSLayoutConstraint?
+    private var rightHandleConstraint: NSLayoutConstraint?
     private var positionConstraint: NSLayoutConstraint?
-
     private var leftMaskConstraint: NSLayoutConstraint?
     private var rightMaskConstraint: NSLayoutConstraint?
 
@@ -161,11 +160,17 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
     }
     
-    public override var zoomFactor: CGFloat? {
+    public var fullWidth: CGFloat { assetPreview.contentWidth + 2 * handleWidth }
+    
+    public override var minWidth: CGFloat? {
         didSet {
-            propertiesDidChange()
-            refreshHandles()
-            layoutSubviews()
+            assetPreview.minWidth = minWidth
+        }
+    }
+    
+    public override var maxWidth: CGFloat? {
+        didSet {
+            assetPreview.maxWidth = maxWidth
         }
     }
 
@@ -195,10 +200,10 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     
     public func initializeHandleTimes() {
         guard
-            let leftConstraint = leftConstraint,
-            let rightConstraint = rightConstraint,
-            leftConstraint.constant == 0,
-            rightConstraint.constant == 0,
+            let leftHandleConstraint = leftHandleConstraint,
+            let rightHandleConstraint = rightHandleConstraint,
+            leftHandleConstraint.constant == 0,
+            rightHandleConstraint.constant == 0,
             let rideDuration = rideDuration else {
             return
         }
@@ -295,8 +300,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
         leftHandleView.heightAnchor.constraint(equalTo: heightAnchor).isActive = true
         leftHandleView.widthAnchor.constraint(equalToConstant: handleWidth).isActive = true
-        leftConstraint = leftHandleView.rightAnchor.constraint(equalTo: assetPreview.collectionView.leftAnchor)
-        leftConstraint?.isActive = true
+        leftHandleConstraint = leftHandleView.rightAnchor.constraint(equalTo: assetPreview.collectionView.leftAnchor)
+        leftHandleConstraint?.isActive = true
         leftHandleView.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
 
         leftHandleKnob.translatesAutoresizingMaskIntoConstraints = false
@@ -324,8 +329,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
 
         rightHandleView.heightAnchor.constraint(equalTo: heightAnchor).isActive = true
         rightHandleView.widthAnchor.constraint(equalToConstant: handleWidth).isActive = true
-        rightConstraint = rightHandleView.leftAnchor.constraint(equalTo: assetPreview.rightAnchor)
-        rightConstraint?.isActive = true
+        rightHandleConstraint = rightHandleView.leftAnchor.constraint(equalTo: assetPreview.rightAnchor)
+        rightHandleConstraint?.isActive = true
         rightHandleView.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
 
         rightHandleKnob.translatesAutoresizingMaskIntoConstraints = false
@@ -392,14 +397,14 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         case .began:
             changeHandleStateColor(color: pressedMainColor)
             if view == leftHandleView {
-                currentLeftConstraint = leftConstraint!.constant
+                currentLeftHandleConstraint = leftHandleConstraint!.constant
                 leftHandleLabel.isHidden = false
             } else if view == rightHandleView {
-                currentRightConstraint = rightConstraint!.constant
+                currentRightHandleConstraint = rightHandleConstraint!.constant
                 rightHandleLabel.isHidden = false
             } else {
-                currentLeftConstraint = leftConstraint!.constant
-                currentRightConstraint = rightConstraint!.constant
+                currentLeftHandleConstraint = leftHandleConstraint!.constant
+                currentRightHandleConstraint = rightHandleConstraint!.constant
                 
                 leftHandleLabel.isHidden = false
                 rightHandleLabel.isHidden = false
@@ -431,16 +436,24 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         default: break
         }
     }
-
+    
+    public func updateWidth(increment: CGFloat) {
+        guard !(increment < 0 && assetPreview.contentWidth == minWidth ||
+              increment > 0 && assetPreview.contentWidth == maxWidth) else { return }
+        propertiesDidChange(widthIncrement: increment)
+        refreshHandles()
+        layoutSubviews()
+    }
+    
     private func updateLeftConstraint(with translation: CGPoint) {
         let maxConstraint = max(rightHandleView.frame.origin.x - minimumDistanceBetweenHandle, handleWidth)
         let minConstraint = max(rightHandleView.frame.origin.x - maximumDistanceBetweenHandle, handleWidth)
-        var newConstraint = min(max(0, currentLeftConstraint + translation.x), maxConstraint)
+        var newConstraint = min(max(0, currentLeftHandleConstraint + translation.x), maxConstraint)
         if newConstraint < minConstraint {
             newConstraint = minConstraint
         }
         
-        if zoomFactor != 1 && assetPreview.contentOffset.x > 0 {
+        if assetPreview.contentWidth > UIScreen.main.bounds.width && assetPreview.contentOffset.x > 0 {
             var offset: CGFloat = 0
             if newConstraint < 35  {
                 offset = -25
@@ -457,17 +470,17 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     }
 
     private func updateRightConstraint(with translation: CGPoint) {
-        guard let leftConstraint = leftConstraint else {
+        guard let leftConstraint = leftHandleConstraint else {
             return
         }
         let maxConstraint = min(leftConstraint.constant  + minimumDistanceBetweenHandle - bounds.width, -handleWidth)
         let minConstraint = min(leftConstraint.constant  + maximumDistanceBetweenHandle - bounds.width, -handleWidth)
-        var newConstraint = max(min(0, currentRightConstraint + translation.x), maxConstraint)
+        var newConstraint = max(min(0, currentRightHandleConstraint + translation.x), maxConstraint)
         if newConstraint > minConstraint {
             newConstraint = minConstraint
         }
         
-        if zoomFactor != 1 && assetPreview.collectionView.contentOffset.x < assetPreview.realContentSize.width - assetPreview.bounds.width {
+        if assetPreview.contentWidth > UIScreen.main.bounds.width && assetPreview.collectionView.contentOffset.x < assetPreview.realContentSize.width - assetPreview.bounds.width {
             var offset: CGFloat = 0
             if newConstraint < -assetPreview.bounds.width + 35  {
                 offset = -25
@@ -529,7 +542,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     public func adjustStartHandle() {
         guard let startTime = startTime,
               let position = position(from: startTime) else { return }
-        leftConstraint?.constant = position - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+        leftHandleConstraint?.constant = position - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
         leftHandleLabel.text = getTime(timeInSeconds: CMTimeGetSeconds(startTime))
     }
     
@@ -543,7 +556,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     public func adjustEndHandle() {
         guard let endTime = endTime,
               let position = position(from: endTime) else { return }
-        rightConstraint?.constant = position - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
+        rightHandleConstraint?.constant = position - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
         rightHandleLabel.text = getTime(timeInSeconds: CMTimeGetSeconds(endTime))
     }
         
