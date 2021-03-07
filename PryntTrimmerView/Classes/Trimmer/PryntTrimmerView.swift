@@ -78,8 +78,8 @@ public class TimeLabelView: UIView {
 /// A delegate to be notified of when the thumb position has changed. Useful to link an instance of the ThumbSelectorView to a
 /// video preview like an `AVPlayer`.
 public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
-    func didChangePositionBar(triggeredHandle: TrimmerView.TriggeredHandle)
-    func positionBarStoppedMoving(triggeredHandle: TrimmerView.TriggeredHandle)
+    func didChangePositionBar(_ playerTime: CMTime)
+    func positionBarStoppedMoving(_ playerTime: CMTime)
     func trimmerHandleDidMove(triggerHandle: TrimmerView.TriggeredHandle)
 }
 
@@ -131,11 +131,12 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
     private let bottomBorder = UIView()
     private let leftHandleView = HandlerView()
     private let rightHandleView = HandlerView()
-    let leftHandleKnob = UIImageView()
-    let rightHandleKnob = UIImageView()
+    private let leftHandleKnob = UIImageView()
+    private let rightHandleKnob = UIImageView()
     private let leftMaskView = UIView()
     private let rightMaskView = UIView()
-
+    private let positionBar = UIView()
+    
     // MARK: Constraints
     
     private var currentLeftHandleConstraint: CGFloat = 0
@@ -193,6 +194,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         setupHandleView()
         setupTrimmerView()
         setupMaskView()
+        setUpPositionBar()
         setupGestures()
         updateMainColor()
         updateHandleColor()
@@ -209,6 +211,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
         startTime = CMTimeMake(value: 0, timescale: 1)
         endTime = CMTime(value: Int64(rideDuration), timescale: 1)
+        positionTime = startTime
         layoutSubviews()
     }
     
@@ -380,12 +383,33 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightMaskView.topAnchor.constraint(equalTo: topAnchor).isActive = true
         rightMaskView.leftAnchor.constraint(equalTo: rightHandleView.centerXAnchor).isActive = true
     }
+    
+    private func setUpPositionBar() {
+        positionBar.frame = CGRect(x: 0, y: 0, width: 50, height: frame.height)
+        positionBar.backgroundColor = .white
+        positionBar.center = CGPoint(x: leftHandleView.frame.maxX, y: center.y)
+        positionBar.layer.cornerRadius = 6
+        positionBar.layer.borderColor = UIColor.gray.cgColor
+        positionBar.layer.borderWidth = 1
+        positionBar.translatesAutoresizingMaskIntoConstraints = false
+        positionBar.isUserInteractionEnabled = true
+        addSubview(positionBar)
+
+        positionBar.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+        positionBar.widthAnchor.constraint(equalToConstant: 6).isActive = true
+        positionBar.heightAnchor.constraint(equalTo: heightAnchor).isActive = true
+        positionConstraint = positionBar.leftAnchor.constraint(equalTo: leftHandleView.rightAnchor, constant: 0)
+        positionConstraint?.isActive = true
+    }
 
     private func setupGestures() {
         let leftPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(TrimmerView.handlePanGesture))
         leftHandleView.addGestureRecognizer(leftPanGestureRecognizer)
         let rightPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(TrimmerView.handlePanGesture))
         rightHandleView.addGestureRecognizer(rightPanGestureRecognizer)
+        
+        let positionPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(TrimmerView.handlePositionPanGesture))
+        positionBar.addGestureRecognizer(positionPanGestureRecognizer)
     }
 
     // MARK: - Trim Gestures
@@ -409,7 +433,7 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
                 leftHandleLabel.isHidden = false
                 rightHandleLabel.isHidden = false
             }
-            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
+            positionBar.isHidden = true
         case .changed:
             let translation = gestureRecognizer.translation(in: superView)
             if view == leftHandleView {
@@ -421,18 +445,34 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
                 updateLeftConstraint(with: translation)
                 updateRightConstraint(with: translation)
             }
-            if let startTime = startTime, view == leftHandleView {
-                seek(to: startTime)
-            } else if let endTime = endTime {
-                seek(to: endTime)
-            }
+            positionTime = startTime
             trimmerDelegate?.trimmerHandleDidMove(triggerHandle:triggeredHandle)
-            updateSelectedPositionTime(stoppedMoving: false, triggeredHandle: triggeredHandle)
         case .cancelled, .ended, .failed:
-            updateSelectedPositionTime(stoppedMoving: true, triggeredHandle: triggeredHandle)
             leftHandleLabel.isHidden = true
             rightHandleLabel.isHidden = true
+            positionBar.isHidden = false
             changeHandleStateColor(color: mainColor)
+            positionTime = startTime
+        default: break
+        }
+    }
+    
+    @objc func handlePositionPanGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        guard let view = gestureRecognizer.view, let superView = gestureRecognizer.view?.superview else { return }
+        let triggeredHandle: TriggeredHandle = view == leftHandleView ? .left : view == rightHandleView ? .right : .unknown
+        switch gestureRecognizer.state {
+
+        case .began:
+//            guard let positionTime = positionTime else { return }
+            currentPosition = positionConstraint?.constant ?? 0
+        case .changed:
+            guard let positionTime = positionTime else { return }
+            let translation = gestureRecognizer.translation(in: superView)
+            updatePositionConstraint(with: translation, isStopped: false)
+            trimmerDelegate?.didChangePositionBar(positionTime)
+        case .cancelled, .ended, .failed:
+            guard let positionTime = positionTime else { return }
+            trimmerDelegate?.positionBarStoppedMoving(positionTime)
         default: break
         }
     }
@@ -494,6 +534,19 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         endTime = time(from: assetPreview.contentOffset.x + assetPreview.bounds.width + newConstraint)
 
         layoutSubviews()
+    }
+    
+    var currentPosition: CGFloat = 0
+    private func updatePositionConstraint(with translation: CGPoint, isStopped: Bool) {
+        guard let constant = positionConstraint?.constant,
+              let leftHandlePosition = leftHandleConstraint?.constant else { return }
+        let newPosition = currentPosition + translation.x
+        let maxPosition = rightHandleView.frame.origin.x - leftHandleView.frame.origin.x
+        let normalizedPosition = min(max(0, newPosition), maxPosition)
+        positionTime = time(from: assetPreview.contentOffset.x + leftHandleView.frame.origin.x + normalizedPosition)
+        layoutSubviews()
+
+
     }
     
     private func getTime(timeInSeconds: Double) -> String {
@@ -559,13 +612,22 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         rightHandleConstraint?.constant = position - assetPreview.bounds.width - (assetPreview.contentOffset.x - assetPreview.horizontalInset)
         rightHandleLabel.text = getTime(timeInSeconds: CMTimeGetSeconds(endTime))
     }
-        
-    private func updateSelectedPositionTime(stoppedMoving: Bool, triggeredHandle: TriggeredHandle) {
-        if stoppedMoving {
-            trimmerDelegate?.positionBarStoppedMoving(triggeredHandle: triggeredHandle)
-        } else {
-            trimmerDelegate?.didChangePositionBar(triggeredHandle: triggeredHandle)
+    
+    public var positionTime: CMTime? {
+        didSet {
+            guard let positionTime = positionTime else { return }
+            seek(to: positionTime)
         }
+    }
+
+    public func adjustPositionBar() {
+        guard let positionTime = positionTime,
+              let position = position(from: positionTime) else { return }
+        let offsetPosition = position - assetPreview.contentOffset.x - leftHandleView.frame.origin.x
+        let maxPosition = rightHandleView.frame.origin.x - (leftHandleView.frame.origin.x + handleWidth)
+        let normalizedPosition = min(max(0, offsetPosition), maxPosition)
+        positionConstraint?.constant = normalizedPosition
+        layoutIfNeeded()
     }
 
     private var minimumDistanceBetweenHandle: CGFloat {
