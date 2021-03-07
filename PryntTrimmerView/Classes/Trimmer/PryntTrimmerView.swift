@@ -211,8 +211,8 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         }
         startTime = CMTimeMake(value: 0, timescale: 1)
         endTime = CMTime(value: Int64(rideDuration), timescale: 1)
-        positionTime = startTime
         layoutSubviews()
+        positionTime = startTime
     }
     
     public func setUpUI(mainColor: UIColor,
