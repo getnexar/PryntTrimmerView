@@ -463,7 +463,6 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         switch gestureRecognizer.state {
 
         case .began:
-//            guard let positionTime = positionTime else { return }
             currentPosition = positionConstraint?.constant ?? 0
         case .changed:
             guard let positionTime = positionTime else { return }
@@ -630,6 +629,20 @@ public protocol TrimmerViewDelegate: AVAssetTimeSelectorDelegate {
         layoutIfNeeded()
     }
 
+    public func videoDidPlay() {
+        guard let positionTime = positionTime,
+              let position = position(from: positionTime) else { return }
+        let leftOffset = assetPreview.contentOffset.x
+        let rightOffset = assetPreview.contentOffset.x + assetPreview.bounds.width - 50
+        if position < leftOffset || position > rightOffset {
+            let newPosition = position - 25
+            let maxPosition = assetPreview.contentSize.width - assetPreview.bounds.width
+            let newOffSet = min(max(0, newPosition), maxPosition)
+            assetPreview.collectionView.contentOffset.x = newOffSet
+            refreshHandles()
+        }
+    }
+    
     private var minimumDistanceBetweenHandle: CGFloat {
         guard let rideDuration = rideDuration else { return 0 }
         return CGFloat(minDuration) * assetPreview.realContentSize.width / CGFloat(rideDuration)
